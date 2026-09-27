@@ -1,0 +1,34 @@
+name: Compilar DSi Homebrew
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar codigo fonte
+        uses: actions/checkout@v4
+
+      - name: Compilar Homebrew via devkitARM (Docker)
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/source devkitpro/devkitarm bash -c "
+            cd /source
+            cat << 'EOF' > Makefile
+          include \$(DEVKITPRO)/ndslib/nds_rules
+
+          all:
+          	\$(CC) -g -Wall -O2 -mthumb -mthumb-interwork main.c -lnds9 -ldswifi9 -o StreetPass.elf
+          	ndstool -c StreetPass.nds -7 \$(DEVKITPRO)/libnds/default.arm7 -9 StreetPass.elf
+          EOF
+            make
+          "
+
+      - name: Guardar ficheiro NDS para Download
+        uses: actions/upload-artifact@v4
+        with:
+          name: DSi-StreetPass-Game
+          path: StreetPass.nds
+          
